@@ -72,30 +72,27 @@ class EC2(object):
 
     def __init__(
         self,
+        boto,
         logger=None,
         stats=None,
-        parser=None,
     ):
         # Private variables, not to be used outside this module
         self._name = NAME
         self._logger = logger or get_logger(self._name)
         self._stats = stats or get_stats(prefix=self._name)
-        self._parser = parser or get_parser(description=self._name)
-        self._args = self._parser.parse_args()
 
-        # Add the boto connector
-        self.boto = Boto(
-            parser=self._parser,
-            logger=self._logger,
-            stats=self._stats,
-        )
+        # Throw exception when Boto2 is not used
+        if not isinstance(boto, Boto):
+            raise TypeError('krux_ec2.ec2.EC2 only supports krux_boto.boto.Boto')
+
+        self.boto = boto
 
         # Set up default cache
         self._conn = None
 
     def _get_connection(self):
         """
-        Returns a connection to the designated region (self.boto.cli_region).
+        Returns a connection to the designated relsgion (self.boto.cli_region).
         The connection is established on the first call for this instance (lazy) and cached.
         """
         if self._conn is None:
