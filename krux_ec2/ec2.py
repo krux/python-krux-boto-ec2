@@ -32,10 +32,49 @@ from krux.logging import get_logger
 from krux.stats import get_stats
 from krux.cli import get_parser, get_group
 from krux_ec2.filter import Filter
-from krux_manage_instance.spinner import Spinner
 
 
 NAME = 'krux-ec2'
+
+
+def get_ec2(args=None, logger=None, stats=None):
+    """
+    Return a usable EC2 object without creating a class around it.
+
+    In the context of a krux.cli (or similar) interface the 'args', 'logger'
+    and 'stats' objects should already be present. If you don't have them,
+    however, we'll attempt to provide usable ones for the SQS setup.
+
+    (If you omit the add_ec2_cli_arguments() call during other cli setup,
+    the Boto object will still work, but its cli options won't show up in
+    --help output)
+
+    (This also handles instantiating a Boto object on its own.)
+    """
+    if not args:
+        parser = get_parser()
+        add_ec2_cli_arguments(parser)
+        args = parser.parse_args()
+
+    if not logger:
+        logger = get_logger(name=NAME)
+
+    if not stats:
+        stats = get_stats(prefix=NAME)
+
+    boto = Boto(
+        log_level=args.boto_log_level,
+        access_key=args.boto_access_key,
+        secret_key=args.boto_secret_key,
+        region=args.boto_region,
+        logger=logger,
+        stats=stats,
+    )
+    return EC2(
+        boto=boto,
+        logger=logger,
+        stats=stats,
+    )
 
 
 def add_ec2_cli_arguments(parser, include_boto_arguments=True):
@@ -109,7 +148,6 @@ class EC2(object):
         retry_on_result=lambda r: not r
     )
     def _wait(self, item, check_func):
-        Spinner.next()
         item.update()
         return check_func(item)
 
