@@ -128,7 +128,7 @@ class EC2(object):
 
     def _get_connection(self):
         """
-        Returns a connection to the designated relsgion (self.boto.cli_region).
+        Returns a connection to the designated region (self.boto.cli_region).
         The connection is established on the first call for this instance (lazy) and cached.
         """
         if self._conn is None:
