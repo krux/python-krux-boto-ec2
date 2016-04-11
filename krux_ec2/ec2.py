@@ -118,6 +118,7 @@ class EC2(object):
         self._stats = stats or get_stats(prefix=self._name)
 
         # Throw exception when Boto2 is not used
+        # TODO: Start using Boto3 and reverse this check
         if not isinstance(boto, Boto):
             raise TypeError('krux_ec2.ec2.EC2 only supports krux_boto.boto.Boto')
 
