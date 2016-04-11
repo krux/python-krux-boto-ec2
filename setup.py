@@ -37,9 +37,11 @@ setup(
     packages=find_packages(),
     install_requires=[
         'krux-boto',
+        'retrying',
     ],
     entry_points={
         'console_scripts': [
+            'krux-ec2-test = krux_ec2.cli:main',
         ],
     },
     test_suite='test',
