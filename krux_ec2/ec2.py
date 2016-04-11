@@ -3,9 +3,6 @@
 # © 2015 Krux Digital, Inc.
 #
 
-# TODO: This is currently inside krux_manage_instance library.
-# However, consider breaking this into a separate library or add it to krux_boto library.
-
 #
 # Standard libraries
 #
