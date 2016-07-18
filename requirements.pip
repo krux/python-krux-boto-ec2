@@ -21,7 +21,7 @@ Sphinx==1.2b1
 Jinja2==2.6
 Pygments==1.6
 docutils==0.10
-kruxstatsd==0.2.2
+kruxstatsd==0.2.4
 statsd==2.0.3
 argparse==1.2.1
 GitPython==0.3.2.RC1
