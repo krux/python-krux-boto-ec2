@@ -37,22 +37,25 @@ NAME = 'krux-ec2'
 
 @decorator
 def map_search_to_filter(f, *args, **kwargs):
+    """Replace a search argument with an instance of Filter.
+
+    NOTE: This only works on methods that have a signature that is just
+    self and the search criteria; it doesn't pass on kwargs and you can't
+    mangle args as it's a tuple. 
+    """
     search_filter = None
-
-    if isinstance(args[0], list):
+    if isinstance(args[1], list):
         search_filter = Filter()
-        for term in args[0]:
+        for term in args[1]:
             search_filter.parse_string(term)
-    elif isinstance(args[0], dict):
-        search_filter = Filter(initial=search)
-    elif isinstance(args[0], Filter):
-        search_filter = args[0]
+    elif isinstance(args[1], dict):
+        search_filter = Filter(initial=args[1])
+    elif isinstance(args[1], Filter):
+        search_filter = args[1]
     else:
-        raise NotImplementedError('This method cannot handle parameter of type {0}'.format(type(search).__name__))
+        raise NotImplementedError('This method cannot handle parameter of type {0}'.format(type(args[1]).__name__))
 
-    args[0] = search_filter  # Replace our passed argument with Filter instance.
-
-    return f(*args, **kwargs)
+    return f(args[0], search_filter)
 
 
 def get_ec2(args=None, logger=None, stats=None):
@@ -338,4 +341,4 @@ class EC2(object):
         """
         ec2 = self._get_connection()
         elastic_ips = ec2.get_all_addresses()
-        return filter(lambda i: i.instance_id == instance.id, elastic_ips)
+        return [ip for ip in elastic_ips if ip.instance_id == instance.id]    
