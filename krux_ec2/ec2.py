@@ -342,3 +342,10 @@ class EC2(object):
         ec2 = self._get_connection()
         elastic_ips = ec2.get_all_addresses()
         return [ip for ip in elastic_ips if ip.instance_id == instance.id]    
+
+    def update_elastic_ip(ip, new_instance):
+        """
+        Updates an Elastic IP to point at the new_instance provided.
+        """
+        ip.disassociate()
+        return ip.associate(instance_id=new_instance.id)
