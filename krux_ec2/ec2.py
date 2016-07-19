@@ -192,6 +192,15 @@ class EC2(object):
 
         return instances
 
+    def find_instances_by_hostname(self, hostname):
+        """
+        Helper method for looking up instances by hostname.
+        """
+        return self.ec2.find_instances({
+            'tag:Name': [hostname],
+            'instance-state-name': ['running', 'stopped'],
+        })
+
     def run_instance(self, ami_id, cloud_config, instance_type, sec_group, zone):
         """
         Starts an instance in the given AMI.
