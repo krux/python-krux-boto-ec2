@@ -36,7 +36,7 @@ NAME = 'krux-ec2'
 
 
 @decorator
-def map_search_to_filter(f, *args, **kwargs):
+def map_search_to_filter(wrapped, *args, **kwargs):
     """Replace a search argument with an instance of Filter.
 
     NOTE: This only works on methods that have a signature that is just
@@ -55,7 +55,7 @@ def map_search_to_filter(f, *args, **kwargs):
     else:
         raise NotImplementedError('This method cannot handle parameter of type {0}'.format(type(args[1]).__name__))
 
-    return f(args[0], search_filter)
+    return wrapped(args[0], search_filter)
 
 
 def get_ec2(args=None, logger=None, stats=None):
