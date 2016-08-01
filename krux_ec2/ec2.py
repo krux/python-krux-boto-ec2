@@ -19,6 +19,7 @@ import time
 import boto.ec2
 from boto.ec2.blockdevicemapping import BlockDeviceType, BlockDeviceMapping
 from retrying import retry
+from decorator import decorator
 
 #
 # Internal libraries
@@ -32,6 +33,30 @@ from krux_ec2.filter import Filter
 
 
 NAME = 'krux-ec2'
+
+
+@decorator
+def map_search_to_filter(wrapped, *args, **kwargs):
+    """
+    Replace a search argument with an instance of Filter.
+
+    NOTE: This only works on methods that have a signature that is just
+    self and the search criteria; it doesn't pass on kwargs and you can't
+    mangle args as it's a tuple. 
+    """
+    search_filter = None
+    if isinstance(args[1], list):
+        search_filter = Filter()
+        for term in args[1]:
+            search_filter.parse_string(term)
+    elif isinstance(args[1], dict):
+        search_filter = Filter(initial=args[1])
+    elif isinstance(args[1], Filter):
+        search_filter = args[1]
+    else:
+        raise NotImplementedError('This method cannot handle parameter of type {0}'.format(type(args[1]).__name__))
+
+    return wrapped(args[0], search_filter)
 
 
 def get_ec2(args=None, logger=None, stats=None):
@@ -149,7 +174,8 @@ class EC2(object):
         item.update()
         return check_func(item)
 
-    def find_instances(self, search):
+    @map_search_to_filter
+    def find_instances(self, instance_filter):
         """
         Returns a list of instances that matches the search criteria.
 
@@ -157,19 +183,6 @@ class EC2(object):
         a dictionary or a list that krux_ec2.filter.Filter class can handle.
         Refer to the docstring on the class.
         """
-        instance_filter = None
-
-        if isinstance(search, list):
-            instance_filter = Filter()
-
-            for term in search:
-                instance_filter.parse_string(term)
-        elif isinstance(search, dict):
-            instance_filter = Filter(initial=search)
-        elif isinstance(search, Filter):
-            instance_filter = search
-        else:
-            raise NotImplementedError('This method cannot handle parameter of type {0}'.format(type(search).__name__))
 
         self._logger.debug('Filters to use: %s', dict(instance_filter))
 
@@ -179,6 +192,15 @@ class EC2(object):
         self._logger.info('Found following instances: %s', instances)
 
         return instances
+
+    def find_instances_by_hostname(self, hostname):
+        """
+        Helper method for looking up instances by hostname.
+        """
+        return self.ec2.find_instances({
+            'tag:Name': [hostname],
+            'instance-state-name': ['running', 'stopped'],
+        })
 
     def run_instance(self, ami_id, cloud_config, instance_type, sec_group, zone):
         """
@@ -279,7 +301,8 @@ class EC2(object):
 
         return volume
 
-    def find_ebs_volumes(self, search):
+    @map_search_to_filter
+    def find_ebs_volumes(self, ebs_filter):
         """
         Returns a list of EBS volumes that matches the search criteria.
 
@@ -287,19 +310,6 @@ class EC2(object):
         a dictionary or a list that krux_ec2.filter.Filter class can handle.
         Refer to the docstring on the class.
         """
-        ebs_filter = None
-
-        if isinstance(search, list):
-            ebs_filter = Filter()
-
-            for term in search:
-                ebs_filter.parse_string(term)
-        elif isinstance(search, dict):
-            ebs_filter = Filter(initial=search)
-        elif isinstance(search, Filter):
-            ebs_filter = search
-        else:
-            raise NotImplementedError('This method cannot handle parameter of type {0}'.format(type(search).__name__))
 
         self._logger.debug('Filters to use: %s', dict(ebs_filter))
 
@@ -327,3 +337,25 @@ class EC2(object):
         self._logger.info('Found following security groups: %s', sec_groups)
 
         return sec_groups
+
+    def find_elastic_ips(self, instance):
+        """
+        Find the Elastic IP(s) mapped to a given instance.
+
+        Will return a list of boto.ec2.address.Address for every Elastic IP
+        that is matched to the instance.id provided. Returns an empty list 
+        if no Elastic IPs are mapped to a given instnce.
+
+        Please note that VPC supports up to 30 IPs per host, which means you
+        will not always get a single IP back.
+        """
+        ec2 = self._get_connection()
+        elastic_ips = ec2.get_all_addresses()
+        return [ip for ip in elastic_ips if ip.instance_id == instance.id]    
+
+    def update_elastic_ip(ip, new_instance):
+        """
+        Updates an Elastic IP to point at the new_instance provided.
+        """
+        ip.disassociate()
+        return ip.associate(instance_id=new_instance.id)

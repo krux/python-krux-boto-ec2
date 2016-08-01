@@ -43,6 +43,7 @@ cover/
 .mr.developer.cfg
 .project
 .pydevproject
+*.swp
 
 # Rope
 .ropeproject
