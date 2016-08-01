@@ -37,7 +37,8 @@ NAME = 'krux-ec2'
 
 @decorator
 def map_search_to_filter(wrapped, *args, **kwargs):
-    """Replace a search argument with an instance of Filter.
+    """
+    Replace a search argument with an instance of Filter.
 
     NOTE: This only works on methods that have a signature that is just
     self and the search criteria; it doesn't pass on kwargs and you can't
