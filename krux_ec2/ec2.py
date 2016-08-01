@@ -11,7 +11,6 @@ from __future__ import absolute_import
 from pprint import pprint
 import re
 import time
-from decorator import decorator
 
 #
 # Third party libraries
@@ -20,6 +19,7 @@ from decorator import decorator
 import boto.ec2
 from boto.ec2.blockdevicemapping import BlockDeviceType, BlockDeviceMapping
 from retrying import retry
+from decorator import decorator
 
 #
 # Internal libraries
