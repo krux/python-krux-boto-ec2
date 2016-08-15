@@ -197,7 +197,7 @@ class EC2(object):
         """
         Helper method for looking up instances by hostname.
         """
-        return self.ec2.find_instances({
+        return self.find_instances({
             'tag:Name': [hostname],
             'instance-state-name': ['running', 'stopped'],
         })
@@ -353,7 +353,7 @@ class EC2(object):
         elastic_ips = ec2.get_all_addresses()
         return [ip for ip in elastic_ips if ip.instance_id == instance.id]    
 
-    def update_elastic_ip(ip, new_instance):
+    def update_elastic_ip(self, ip, new_instance):
         """
         Updates an Elastic IP to point at the new_instance provided.
         """
