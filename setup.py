@@ -38,6 +38,7 @@ setup(
     install_requires=[
         'krux-boto',
         'retrying',
+        'decorator',
     ],
     entry_points={
         'console_scripts': [
