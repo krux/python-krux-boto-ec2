@@ -45,5 +45,10 @@ setup(
             'krux-ec2-test = krux_ec2.cli:main',
         ],
     },
+    tests_require=[
+        'coverage',
+        'mock',
+        'nose',
+    ],
     test_suite='test',
 )
