@@ -37,7 +37,6 @@ setup(
     packages=find_packages(),
     install_requires=[
         'krux-boto',
-        'retrying',
         'decorator',
     ],
     entry_points={

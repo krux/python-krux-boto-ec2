@@ -8,24 +8,18 @@
 #
 
 from __future__ import absolute_import
-from pprint import pprint
-import re
-import time
 
 #
 # Third party libraries
 #
 
-import boto.ec2
-from boto.ec2.blockdevicemapping import BlockDeviceType, BlockDeviceMapping
-from retrying import retry
 from decorator import decorator
 
 #
 # Internal libraries
 #
 
-from krux_boto import Boto, add_boto_cli_arguments
+from krux_boto import Boto3, add_boto_cli_arguments
 from krux.logging import get_logger
 from krux.stats import get_stats
 from krux.cli import get_parser, get_group
@@ -42,7 +36,7 @@ def map_search_to_filter(wrapped, *args, **kwargs):
 
     NOTE: This only works on methods that have a signature that is just
     self and the search criteria; it doesn't pass on kwargs and you can't
-    mangle args as it's a tuple. 
+    mangle args as it's a tuple.
     """
     search_filter = None
     if isinstance(args[1], list):
@@ -84,7 +78,7 @@ def get_ec2(args=None, logger=None, stats=None):
     if not stats:
         stats = get_stats(prefix=NAME)
 
-    boto = Boto(
+    boto = Boto3(
         log_level=args.boto_log_level,
         access_key=args.boto_access_key,
         secret_key=args.boto_secret_key,
@@ -142,37 +136,36 @@ class EC2(object):
         self._logger = logger or get_logger(self._name)
         self._stats = stats or get_stats(prefix=self._name)
 
-        # Throw exception when Boto2 is not used
+        # Throw exception when Boto3 is not used
         # TODO: Start using Boto3 and reverse this check
-        if not isinstance(boto, Boto):
-            raise TypeError('krux_ec2.ec2.EC2 only supports krux_boto.boto.Boto')
+        if not isinstance(boto, Boto3):
+            raise TypeError('krux_ec2.ec2.EC2 only supports krux_boto.boto.Boto3')
 
         self.boto = boto
 
         # Set up default cache
-        self._conn = None
+        self._resource = None
+        self._client = None
 
-    def _get_connection(self):
+    def _get_resource(self):
         """
-        Returns a connection to the designated region (self.boto.cli_region).
+        Returns a resource to the designated region (self.boto.cli_region).
         The connection is established on the first call for this instance (lazy) and cached.
         """
-        if self._conn is None:
-            self._conn = self.boto.ec2.connect_to_region(self.boto.cli_region)
+        if self._resource is None:
+            self._resource = self.boto.resource(service_name='ec2', region_name=self.boto.cli_region)
 
-        return self._conn
+        return self._resource
 
-    @retry(
-        stop_max_delay=TIMEOUT,
-        wait_fixed=CHECK_INTERVAL,
-        # GOTCHA: Sometimes, the first few checks may be performed when the item is not ready.
-        # This causes an error. Ignore this error during this check.
-        retry_on_exception=lambda e: isinstance(e, boto.exception.EC2ResponseError),
-        retry_on_result=lambda r: not r
-    )
-    def _wait(self, item, check_func):
-        item.update()
-        return check_func(item)
+    def _get_client(self):
+        """
+        Returns a client to the designated region (self.boto.cli_region).
+        The connection is established on the first call for this instance (lazy) and cached.
+        """
+        if self._client is None:
+            self._client = self.boto.client(service_name='ec2', region_name=self.boto.cli_region)
+
+        return self._client
 
     @map_search_to_filter
     def find_instances(self, instance_filter):
@@ -182,12 +175,16 @@ class EC2(object):
         The search parameter must be either a krux_ec2.filter.Filter instance or
         a dictionary or a list that krux_ec2.filter.Filter class can handle.
         Refer to the docstring on the class.
+
+        .. seealso:: https://boto3.readthedocs.io/en/stable/reference/services/ec2.html#EC2.ServiceResource.instances
+
+        :param instance_filter: The parameter to search by. Refer to the docstring on the class for more.
+        :type instance_filter: krux_ec2.filter.Filter | dict | list
         """
 
         self._logger.debug('Filters to use: %s', dict(instance_filter))
 
-        ec2 = self._get_connection()
-        instances = ec2.get_only_instances(filters=dict(instance_filter))
+        instances = list(self._get_resource().instances.filter(Filters=instance_filter.to_filter()))
 
         self._logger.info('Found following instances: %s', instances)
 
@@ -196,6 +193,9 @@ class EC2(object):
     def find_instances_by_hostname(self, hostname):
         """
         Helper method for looking up instances by hostname.
+
+        :param hostname: The hostname to look for
+        :type hostname: str
         """
         return self.find_instances({
             'tag:Name': [hostname],
@@ -211,44 +211,47 @@ class EC2(object):
         The instance_type, sec_group, and zone are passed as respective parameters to AWS.
 
         4 block devices are created as ephemeral and passed.
+
+        .. seealso:: https://boto3.readthedocs.io/en/stable/reference/services/ec2.html#EC2.ServiceResource.create_instances
         """
         # OK, so, on larger instances, extra devices only show up if you tell them to associate with a block device.
         # These EBS AMIs don't set this up, so we have to. sdb will always be ephemeral0,
         # which is how we've always done it. If there are more devices, they will get sdc,sdd,sde.
         # NOTE: see mounts.pp in kbase for how-we-deal-with-these.
-        block_device_map = BlockDeviceMapping()
-        sdb = BlockDeviceType()
-        sdc = BlockDeviceType()
-        sdd = BlockDeviceType()
-        sde = BlockDeviceType()
-        sdb.ephemeral_name = 'ephemeral0'
-        sdc.ephemeral_name = 'ephemeral1'
-        sdd.ephemeral_name = 'ephemeral2'
-        sde.ephemeral_name = 'ephemeral3'
-        block_device_map['/dev/sdb'] = sdb
-        block_device_map['/dev/sdc'] = sdc
-        block_device_map['/dev/sdd'] = sdd
-        block_device_map['/dev/sde'] = sde
-        # TODO: Focus attention during code review
+        # TODO: Turn this into a const
+        block_device_map = [{
+            'VirtualName': 'ephemeral0',
+            'DeviceName': '/dev/sdb',
+        }, {
+            'VirtualName': 'ephemeral1',
+            'DeviceName': '/dev/sdc',
+        }, {
+            'VirtualName': 'ephemeral2',
+            'DeviceName': '/dev/sdd',
+        }, {
+            'VirtualName': 'ephemeral3',
+            'DeviceName': '/dev/sde',
+        }]
 
-        ec2 = self._get_connection()
-        reservation = ec2.run_instances(
-            image_id=ami_id,
-            instance_type=instance_type,
-            user_data=cloud_config,
-            security_groups=[sec_group],
-            block_device_map=block_device_map,
-            instance_profile_name=self.INSTANCE_PROFILE_NAME,
-            placement=zone,
+        resource = self._get_resource()
+        instances = resource.create_instances(
+            ImageId=ami_id,
+            MinCount=1,
+            MaxCount=1,
+            InstanceType=instance_type,
+            UserData=cloud_config,
+            SecurityGroups=[sec_group],
+            BlockDeviceMappings=block_device_map,
+            IamInstanceProfile={'Name': self.INSTANCE_PROFILE_NAME},
+            Placement={'AvailabilityZone': zone},
         )
 
-        self._logger.debug('Started an instance in following reservation: %s', reservation)
-        self._logger.debug('Following instances are running on the reservation: %s', reservation.instances)
+        instance = instances[0]
+        self._logger.debug('Waiting for the instance %s to be ready...', instance.id)
 
-        instance = reservation.instances[0]
-
-        self._logger.debug('Waiting for the instance to be ready...')
-        self._wait(instance, lambda instance: instance.state == 'running')
+        waiter = self._get_client().get_waiter('instance_running')
+        waiter.wait(InstanceIds=[instance.id])
+        instance.reload()
 
         self._logger.info('Started instance %s', instance.public_dns_name)
 
@@ -272,27 +275,37 @@ class EC2(object):
         If save_on_termination parameter is true, then the EBS volume is saved (not deleted)
         upon the instance termination.
         """
-        volume = None
-
-        ec2 = self._get_connection()
         if volume_id is not None:
             # GOTCHA: volume_id takes priority over volume_size
-            volume = ec2.create_volume(volume_ids=[volume_id])[0]
+            volume = self.find_ebs_volumes({'volume-id': [volume_id]})[0]
         elif volume_size is not None:
-            volume = ec2.create_volume(volume_size, instance.placement)
+            volume = self._get_resource().create_volume(
+                Size=volume_size,
+                AvailabilityZone=instance.placement['AvailabilityZone'],
+                VolumeType='gp2',
+            )
 
-            self._logger.debug('Waiting for the EBS volume to be ready...')
-            self._wait(volume, lambda volume: volume.status == 'available')
+            self._logger.debug('Waiting for the EBS volume %s to be ready...', volume.id)
+            waiter = self._get_client().get_waiter('volume_available')
+            waiter.wait(VolumeIds=[volume.id])
+
+            volume.reload()
         else:
             raise ValueError('Either volume_id or volume_size is required')
 
-        volume.attach(instance.id, device)
+        volume.attach_to_instance(InstanceId=instance.id, Device=device)
 
         self._logger.debug('Waiting for the EBS volume to be attached...')
-        self._wait(volume, lambda volume: volume.attachment_state() == 'attached')
+        waiter = self._get_client().get_waiter('volume_in_use')
+        waiter.wait(VolumeIds=[volume.id])
 
-        if not save_on_termination:
-            instance.modify_attribute('blockDeviceMapping', {device: True})
+        instance.modify_attribute(BlockDeviceMappings=[{
+            'DeviceName': device,
+            'Ebs': {
+                'VolumeId': volume.id,
+                'DeleteOnTermination': not save_on_termination,
+            },
+        }])
 
         self._logger.info(
             'Attached EBS volume %s to instance %s at %s',
@@ -309,12 +322,13 @@ class EC2(object):
         The search parameter must be either a krux_ec2.filter.Filter instance or
         a dictionary or a list that krux_ec2.filter.Filter class can handle.
         Refer to the docstring on the class.
+
+        .. seealso:: https://boto3.readthedocs.io/en/stable/reference/services/ec2.html#EC2.ServiceResource.volumes
         """
 
         self._logger.debug('Filters to use: %s', dict(ebs_filter))
 
-        ec2 = self._get_connection()
-        volumes = ec2.get_all_volumes(filters=dict(ebs_filter))
+        volumes = list(self._get_resource().volumes.filter(Filters=ebs_filter.to_filter()))
 
         self._logger.info('Found following volumes: %s', volumes)
 
@@ -325,14 +339,15 @@ class EC2(object):
         Returns a list of security groups with the given group name.
 
         Performs a contains search rather than exact match.
+
+        .. seealso:: https://boto3.readthedocs.io/en/stable/reference/services/ec2.html#EC2.ServiceResource.security_groups
         """
         security_filter = Filter()
         security_filter.add_filter('group-name', security_group)
 
         self._logger.debug('Filters to use: %s', dict(security_filter))
 
-        ec2 = self._get_connection()
-        sec_groups = ec2.get_all_security_groups(filters=dict(security_filter))
+        sec_groups = list(self._get_resource().security_groups.filter(Filters=security_filter.to_filter()))
 
         self._logger.info('Found following security groups: %s', sec_groups)
 
@@ -343,19 +358,17 @@ class EC2(object):
         Find the Elastic IP(s) mapped to a given instance.
 
         Will return a list of boto.ec2.address.Address for every Elastic IP
-        that is matched to the instance.id provided. Returns an empty list 
+        that is matched to the instance.id provided. Returns an empty list
         if no Elastic IPs are mapped to a given instnce.
 
         Please note that VPC supports up to 30 IPs per host, which means you
         will not always get a single IP back.
         """
-        ec2 = self._get_connection()
-        elastic_ips = ec2.get_all_addresses()
-        return [ip for ip in elastic_ips if ip.instance_id == instance.id]    
+        return instance.classic_address
 
-    def update_elastic_ip(self, ip, new_instance):
+    def update_elastic_ip(self, address, new_instance):
         """
         Updates an Elastic IP to point at the new_instance provided.
         """
-        ip.disassociate()
-        return ip.associate(instance_id=new_instance.id)
+        #address.disassociate()
+        return address.associate(InstanceId=new_instance.id)

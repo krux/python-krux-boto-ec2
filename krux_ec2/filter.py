@@ -8,18 +8,28 @@
 #
 
 from __future__ import absolute_import
+from collections import MutableMapping
+
+#
+# Third party libraries
+#
+
+from six import iteritems
 
 
-class Filter(object):
+class Filter(MutableMapping):
     """
     Class to represent and handle AWS API's filters.
 
+    .. seealso:: https://boto3.readthedocs.io/en/stable/reference/services/ec2.html#EC2.ServiceResource.instances
+
+    :example:
     You can use this in 3 different ways:
         1. Pass a dictionary of filter criteria and values to the constructor
         2. Create an empty filter and add criteria using add_filter or add_tag_filter methods
         3. Create an empty filter and add creteria from string using parse_string method
 
-    >>> f1 = Filter({'tag:Name': 'example.krxd.net', 'instance-state-name': ['running', 'stopped']})
+    >>> f1 = Filter({'tag:Name': ['example.krxd.net'], 'instance-state-name': ['running', 'stopped']})
 
     >>> f2 = Filter()
     >>> f2.add_tag_filter('Name', 'example.krxd.net')
@@ -39,11 +49,29 @@ class Filter(object):
         """
         The initial parameter must be a dictionary of string to a list of values.
         The key is the filter criteria name, and the value is a list of matches.
+
+        :param initial: Initial set of filters to start with
+        :type initial: dict | None
         """
-        if initial is None:
-            self._filter = {}
-        else:
-            self._filter = initial
+        self._filter = {}
+
+        if initial is not None:
+            self._filter.update(initial)
+
+    def __getitem__(self, key):
+        return self._filter[key]
+
+    def __setitem__(self, key, value):
+        self._filter[key] = value
+
+    def __delitem__(self, key):
+        del self._filter[key]
+
+    def __iter__(self):
+        return iter(self._filter)
+
+    def __len__(self):
+        return len(self._filter)
 
     def add_filter(self, name, value):
         """
@@ -52,17 +80,29 @@ class Filter(object):
         creating an OR match.
 
         For filtering via tags, use add_tag_filter.
+
+        .. seealso:: https://boto3.readthedocs.io/en/stable/reference/services/ec2.html#EC2.ServiceResource.instances
+
+        :param name: Name of the filter (e.g. 'instance-type')
+        :type name: str
+        :param value: Value of the filter (e.g. 'c3.large')
+        :type value: str
         """
-        if name in self._filter:
-            self._filter[name].append(value)
+        if name in self:
+            self[name].append(value)
         else:
-            self._filter.update({name: [value]})
+            self.update({name: [value]})
 
     def add_tag_filter(self, name, value):
         """
         Adds a filter with the given tag name and value.
 
-        This is a short cut method for add_filter
+        .. seealso:: Filter.add_filter()
+
+        :param name: Name of the tag (e.g. 'krux-status')
+        :type name: str
+        :param value: Value of the filter (e.g. 'bootstrap_complete')
+        :type value: str
         """
         self.add_filter('tag:{0}'.format(name), value)
 
@@ -72,10 +112,10 @@ class Filter(object):
 
         The string must follow the format "key=value". If "=" is not present in the string,
         the string is considered as a "tag-value" search. For searching tags, use "tag:Key=value" format.
-        """
-        name = None
-        value = None
 
+        :param search_term: A string containing the key and the value of search filter with `=` as the delimiter.
+        :type search_term: str
+        """
         if '=' in search_term:
             name, value = search_term.split('=', 1)
         else:
@@ -84,9 +124,11 @@ class Filter(object):
 
         self.add_filter(name, value)
 
-    def __iter__(self):
+    def to_filter(self):
         """
         Override so that dict(Filter) returns the dict to be used by boto.
         """
-        for key in self._filter:
-            yield key, self._filter[key]
+        return [
+            {'Name': key, 'Values': values}
+            for key, values in iteritems(self)
+        ]
