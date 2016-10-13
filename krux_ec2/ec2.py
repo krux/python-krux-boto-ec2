@@ -370,5 +370,4 @@ class EC2(object):
         """
         Updates an Elastic IP to point at the new_instance provided.
         """
-        #address.disassociate()
         return address.associate(InstanceId=new_instance.id)
