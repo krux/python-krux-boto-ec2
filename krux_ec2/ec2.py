@@ -239,8 +239,7 @@ class EC2(Object):
         instance = instances[0]
         self._logger.debug('Waiting for the instance %s to be ready...', instance.id)
 
-        waiter = self._get_client().get_waiter('instance_running')
-        waiter.wait(InstanceIds=[instance.id])
+        instance.wait_until_running()
         instance.reload()
 
         self._logger.info('Started instance %s', instance.public_dns_name)
