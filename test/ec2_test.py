@@ -322,7 +322,6 @@ class MapSearchToFilterStub(object):
         self.results = search
 
 
-@unittest.skip
 class MapSearchToFilterDecoratorTests(unittest.TestCase):
     def setUp(self):
         self.search_stub = MapSearchToFilterStub()
@@ -352,4 +351,4 @@ class MapSearchToFilterDecoratorTests(unittest.TestCase):
     def test_invalid_argument_raises_error(self):
         """Make sure NotImplementedError is raised on invalid arguments."""
         with self.assertRaises(NotImplementedError):
-            self.search_stub.filter_stubs(mock.Mock())
+            self.search_stub.filter_stubs(MagicMock())
