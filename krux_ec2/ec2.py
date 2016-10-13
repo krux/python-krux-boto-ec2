@@ -114,17 +114,28 @@ class EC2(Object):
     A manager to handle all EC2 related functions.
     Each instance is locked to a connection to a designated region (self.boto.cli_region).
     """
-
-    # Timeout value in milliseconds for waiting for EC2 items to be ready
-    TIMEOUT = 120000  # 2 minutes
-
-    # Number of milliseconds to wait in between 2 checks
-    CHECK_INTERVAL = 3000  # 3 seconds
-
     # This is the IAM role that the instance is started up with. The bootstrap
     # role is needed so that bootstrap.py can update the instance's tags with
     # its status.
     INSTANCE_PROFILE_NAME = 'bootstrap'
+
+    # OK, so, on larger instances, extra devices only show up if you tell them to associate with a block device.
+    # These EBS AMIs don't set this up, so we have to. sdb will always be ephemeral0,
+    # which is how we've always done it. If there are more devices, they will get sdc,sdd,sde.
+    # NOTE: see mounts.pp in kbase for how-we-deal-with-these.
+    _BLOCK_DEVICE_MAP = [{
+        'VirtualName': 'ephemeral0',
+        'DeviceName': '/dev/sdb',
+    }, {
+        'VirtualName': 'ephemeral1',
+        'DeviceName': '/dev/sdc',
+    }, {
+        'VirtualName': 'ephemeral2',
+        'DeviceName': '/dev/sdd',
+    }, {
+        'VirtualName': 'ephemeral3',
+        'DeviceName': '/dev/sde',
+    }]
 
     def __init__(
         self,
@@ -212,25 +223,6 @@ class EC2(Object):
 
         .. seealso:: https://boto3.readthedocs.io/en/stable/reference/services/ec2.html#EC2.ServiceResource.create_instances
         """
-        # OK, so, on larger instances, extra devices only show up if you tell them to associate with a block device.
-        # These EBS AMIs don't set this up, so we have to. sdb will always be ephemeral0,
-        # which is how we've always done it. If there are more devices, they will get sdc,sdd,sde.
-        # NOTE: see mounts.pp in kbase for how-we-deal-with-these.
-        # TODO: Turn this into a const
-        block_device_map = [{
-            'VirtualName': 'ephemeral0',
-            'DeviceName': '/dev/sdb',
-        }, {
-            'VirtualName': 'ephemeral1',
-            'DeviceName': '/dev/sdc',
-        }, {
-            'VirtualName': 'ephemeral2',
-            'DeviceName': '/dev/sdd',
-        }, {
-            'VirtualName': 'ephemeral3',
-            'DeviceName': '/dev/sde',
-        }]
-
         resource = self._get_resource()
         instances = resource.create_instances(
             ImageId=ami_id,
@@ -239,7 +231,7 @@ class EC2(Object):
             InstanceType=instance_type,
             UserData=cloud_config,
             SecurityGroups=[sec_group],
-            BlockDeviceMappings=block_device_map,
+            BlockDeviceMappings=self._BLOCK_DEVICE_MAP,
             IamInstanceProfile={'Name': self.INSTANCE_PROFILE_NAME},
             Placement={'AvailabilityZone': zone},
         )
