@@ -24,6 +24,7 @@ from krux.logging import get_logger
 from krux.stats import get_stats
 from krux.cli import get_parser, get_group
 from krux_ec2.filter import Filter
+from krux.object import Object
 
 
 NAME = 'krux-ec2'
@@ -108,7 +109,7 @@ def add_ec2_cli_arguments(parser, include_boto_arguments=True):
     group = get_group(parser, NAME)
 
 
-class EC2(object):
+class EC2(Object):
     """
     A manager to handle all EC2 related functions.
     Each instance is locked to a connection to a designated region (self.boto.cli_region).
@@ -131,13 +132,10 @@ class EC2(object):
         logger=None,
         stats=None,
     ):
-        # Private variables, not to be used outside this module
-        self._name = NAME
-        self._logger = logger or get_logger(self._name)
-        self._stats = stats or get_stats(prefix=self._name)
+        # Call to the superclass to bootstrap.
+        super(EC2, self).__init__(name=NAME, logger=logger, stats=stats)
 
         # Throw exception when Boto3 is not used
-        # TODO: Start using Boto3 and reverse this check
         if not isinstance(boto, Boto3):
             raise TypeError('krux_ec2.ec2.EC2 only supports krux_boto.boto.Boto3')
 
