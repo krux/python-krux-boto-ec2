@@ -35,10 +35,20 @@ def map_search_to_filter(wrapped, *args, **kwargs):
     """
     Replace a search argument with an instance of Filter.
 
-    NOTE: This only works on methods that have a signature that is just
-    self and the search criteria; it doesn't pass on kwargs and you can't
-    mangle args as it's a tuple.
+    .. note::
+        This only works on methods that have a signature that is just
+        self and the search criteria; it doesn't pass on kwargs and you can't
+        mangle args as it's a tuple.
+
+    :param wrapped: Function that is wrapped by this decorator
+    :type wrapped: function
+    :param args: Ordered arguments of `wrapped`. The 2nd argument is modified as :py:class:`krux_ec2.filter.Filter`.
+                 The 3rd argument and forward are discarded.
+    :type args: list
+    :param kwargs: Keyword arguments of `wrapped`. Discarded completely.
+    :type kwargs: dict
     """
+    # TODO: Update this to allow other arguments
     search_filter = None
     if isinstance(args[1], list):
         search_filter = Filter()
