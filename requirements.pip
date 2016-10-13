@@ -7,6 +7,9 @@ krux-boto==1.2.0
 # For decorators
 decorator==4.0.10
 
+# For Python 3 compatibility
+six==1.10.0
+
 # Transitive libraries
 # This is needed so there are no version conflicts when
 # one downstream library does NOT specify the version it wants,
@@ -17,7 +20,6 @@ krux-stdlib==2.4.0
 boto==2.42.0
 boto3==1.4.0
 enum34==1.1.6
-six==1.10.0
 pystache==0.5.4
 Sphinx==1.4.6
 kruxstatsd==0.3.0
