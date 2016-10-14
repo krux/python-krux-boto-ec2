@@ -37,7 +37,7 @@ class Application(krux_boto.cli.Application):
             'tag:Name': ['cc001.krxd.net'],
             'instance-state-name': ['running', 'stopped'],
         })
-        print(self.ec2.find_instances(f))
+        self.ec2.find_instances(f)
 
 
 def main():
