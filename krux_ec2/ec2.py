@@ -55,7 +55,7 @@ def map_search_to_filter(wrapped, *args, **kwargs):
         for term in args[1]:
             search_filter.parse_string(term)
     elif isinstance(args[1], dict):
-        search_filter = Filter(initial=args[1])
+        search_filter = Filter(args[1])
     elif isinstance(args[1], Filter):
         search_filter = args[1]
     else:
