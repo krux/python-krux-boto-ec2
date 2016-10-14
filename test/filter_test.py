@@ -51,6 +51,18 @@ class FilterTest(unittest.TestCase):
         """
         self.assertEqual({}, self.f)
 
+    def test_init_keywords(self):
+        """
+        Ensure that filters can be initialized with keywords.
+        """
+        dic = {
+            self.TEST_TAG_KEY_FULL: [self.TEST_TAG_VALUE],
+            self.TEST_FILTER_KEY: self.TEST_FILTER_VALUE,
+        }
+        self.f = Filter(**dic)
+
+        self.assertEqual(dic, self.f)
+
     def test_add_filter_new(self):
         """
         Make sure Filter.add_filter mutates filter as expected.
