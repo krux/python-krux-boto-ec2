@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from setuptools import setup, find_packages
 
 # We use the version to construct the DOWNLOAD_URL.
-VERSION = '0.0.3'
+VERSION = '0.1.0'
 
 # URL to the repository on Github.
 REPO_URL = 'https://github.com/krux/python-krux-boto-ec2'
@@ -37,13 +37,18 @@ setup(
     packages=find_packages(),
     install_requires=[
         'krux-boto',
-        'retrying',
         'decorator',
+        'six',
     ],
     entry_points={
         'console_scripts': [
             'krux-ec2-test = krux_ec2.cli:main',
         ],
     },
+    tests_require=[
+        'coverage',
+        'mock',
+        'nose',
+    ],
     test_suite='test',
 )

@@ -8,13 +8,11 @@
 #
 
 from __future__ import absolute_import
-import os
 
 #
 # Internal libraries
 #
 
-from krux.cli import get_group
 import krux_boto.cli
 from krux_ec2.ec2 import add_ec2_cli_arguments, get_ec2, NAME
 from krux_ec2.filter import Filter
@@ -36,10 +34,10 @@ class Application(krux_boto.cli.Application):
 
     def run(self):
         f = Filter({
-            'tag:Name': 'cc001.krxd.net',
+            'tag:Name': ['cc001.krxd.net'],
             'instance-state-name': ['running', 'stopped'],
         })
-        print self.ec2.find_instances(f)
+        self.ec2.find_instances(f)
 
 
 def main():

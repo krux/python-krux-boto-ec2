@@ -4,7 +4,7 @@
 
 ## Warning
 
-In the current version, `krux_ec2.ec2.EC2` is only compatible with `krux_boto.boto.Boto` object. Passing other objects, such as `krux_boto.boto.Boto3`, will cause an exception.
+`krux_ec2.ec2.EC2` is only compatible with `krux_boto.boto.Boto3` object. Passing other objects, such as `krux_boto.boto.Boto`, will cause an exception.
 
 ## Application quick start
 
@@ -24,13 +24,15 @@ class Application(krux_ec2.cli.Application):
             'tag:Name': 'example.krxd.net',
             'instance-state-name': ['running', 'stopped'],
         })
-        print self.ec2.find_instances(f)
+        print(self.ec2.find_instances(f))
+
 
 def main():
     # The name must be unique to the organization.
     app = Application(name='krux-my-ec2-script')
     with app.context():
         app.run()
+
 
 # Run the application stand alone
 if __name__ == '__main__':
@@ -88,8 +90,8 @@ class MyApplication(object):
             'tag:Name': 'example.krxd.net',
             'instance-state-name': ['running', 'stopped'],
         })
-        print self.ec2.find_instances(f)
+        print(self.ec2.find_instances(f))
 
 ```
 
-As long as you get an instance of `krux_boto.boto.Boto`, the rest are the same. Refer to `krux_boto` module's [README](https://github.com/krux/python-krux-boto/blob/master/README.md) on various ways to instanciate the class.
+As long as you get an instance of `krux_boto.boto.Boto`, the rest are the same. Refer to `krux_boto` module's [README](https://github.com/krux/python-krux-boto/blob/master/README.md) on various ways to instantiate the class.
