@@ -310,6 +310,27 @@ class EC2(Object):
 
         return instance
 
+    @staticmethod
+    def get_tags(instance_tags):
+        result = {}
+        for tag in instance_tags:
+            if isinstance(tag, dict) and 'Key' in tag and 'Value' in tag:
+                key = tag['Key']
+                value = tag['Value']
+            elif hasattr(tag, 'key') and hasattr(tag, 'value'):
+                key = tag.key
+                value = tag.value
+            else:
+                raise TypeError('{type} is not a valid type for a tag', type(tag))
+
+            if key == 's_classes':
+                value = value.split(',')
+
+            result[key] = value
+
+        return result
+
+
     def attach_ebs_volume(
         self,
         instance,
