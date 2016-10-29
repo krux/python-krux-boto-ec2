@@ -323,14 +323,16 @@ class EC2(Object):
         """
         result = {}
         for tag in instance_tags:
-            if isinstance(tag, dict) and 'Key' in tag and 'Value' in tag:
+            if isinstance(tag, dict):
+                # GOTCHA: This will throw an error if there is no 'Key' or 'Value' in the dictionary.
+                #         That is intentional so that the stacktrace will come back to here.
                 key = tag['Key']
                 value = tag['Value']
             elif hasattr(tag, 'key') and hasattr(tag, 'value'):
                 key = tag.key
                 value = tag.value
             else:
-                raise TypeError('{type} is not a valid type for a tag', type(tag))
+                raise TypeError('{type} is not a valid type for a tag'.format(type=type(tag)))
 
             if key == 's_classes':
                 value = value.split(',')
@@ -338,7 +340,6 @@ class EC2(Object):
             result[key] = value
 
         return result
-
 
     def attach_ebs_volume(
         self,
