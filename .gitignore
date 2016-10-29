@@ -54,3 +54,6 @@ cover/
 
 # Sphinx documentation
 docs/_build/
+
+# JetBrain IDE settings
+.idea/
