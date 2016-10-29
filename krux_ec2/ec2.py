@@ -312,6 +312,15 @@ class EC2(Object):
 
     @staticmethod
     def get_tags(instance_tags):
+        """
+        Converts the given list of tags into a single dictionary. If there is any duplicate of keys,
+        the later overwrites the former.
+
+        :param instance_tags: List of tags
+        :type instance_tags: list[dict] | list[EC2.Tag]
+        :return: Dictionary of tags
+        :rtype: dict
+        """
         result = {}
         for tag in instance_tags:
             if isinstance(tag, dict) and 'Key' in tag and 'Value' in tag:
