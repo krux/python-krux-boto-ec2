@@ -203,15 +203,44 @@ class EC2Tests(unittest.TestCase):
         result = EC2.get_tags(self.FAKE_TAGS_TAG)
         self.assertEqual(self.FAKE_TAGS, result)
 
+    def test_get_tags_dict_no_key(self):
+        """
+        EC2.get_tags correctly raises error when no 'Key' key is present in a dictionary
+        """
+        invalid_tag = {'Value': 'foo'}
+        with self.assertRaises(ValueError) as e:
+            EC2.get_tags([invalid_tag])
+
+        self.assertEqual(
+            'The {tag} is invalid and/or contains invalid values'.format(tag=invalid_tag),
+            str(e.exception),
+        )
+
+    def test_get_tags_dict_no_value(self):
+        """
+        EC2.get_tags correctly raises error when no 'Value' key is present in a dictionary
+        """
+        invalid_tag = {'Key': 'foo'}
+        with self.assertRaises(ValueError) as e:
+            EC2.get_tags([invalid_tag])
+
+        self.assertEqual(
+            'The {tag} is invalid and/or contains invalid values'.format(tag=invalid_tag),
+            str(e.exception),
+        )
+
     def test_get_tags_wrong_type(self):
         """
         EC2.get_tags correctly raises error when wrong typed tag is passed
         """
         invalid_tag = 1
-        with self.assertRaises(TypeError) as e:
+        with self.assertRaises(ValueError) as e:
             EC2.get_tags([invalid_tag])
 
-        self.assertEqual('{type} is not a valid type for a tag'.format(type=type(invalid_tag)), str(e.exception))
+        self.assertEqual(
+            'The {tag} is invalid and/or contains invalid values'.format(tag=invalid_tag),
+            str(e.exception),
+        )
 
     def test_attach_ebs_volume(self):
         """
