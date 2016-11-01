@@ -15,6 +15,7 @@ import unittest
 #
 
 from mock import MagicMock, patch, call
+from six import iteritems
 
 #
 # Internal libraries
@@ -45,6 +46,18 @@ class EC2Tests(unittest.TestCase):
     FAKE_VOLUME = MagicMock(
         id='vol-a1b2c3d4',
     )
+    FAKE_TAGS = {
+        'Name': FAKE_HOSTNAME,
+        's_classes': ['s_basic', 's_basic::minimal'],
+    }
+    FAKE_TAGS_DICT = [
+        {'Key': key, 'Value': ','.join(value) if isinstance(value, list) else value}
+        for key, value in iteritems(FAKE_TAGS)
+    ]
+    FAKE_TAGS_TAG = [
+        MagicMock(key=key, value=(','.join(value) if isinstance(value, list) else value))
+        for key, value in iteritems(FAKE_TAGS)
+    ]
 
     _BLOCK_DEVICE_MAP = [{
         'VirtualName': 'ephemeral0',
@@ -174,6 +187,59 @@ class EC2Tests(unittest.TestCase):
         self.FAKE_INSTANCE.reload.assert_called_once_with()
         self._logger.info.assert_called_once_with(
             'Started instance %s', self.FAKE_INSTANCE.public_dns_name
+        )
+
+    def test_get_tags_dict(self):
+        """
+        EC2.get_tags correctly converts the tags in list[dict] format
+        """
+        result = EC2.get_tags(self.FAKE_TAGS_DICT)
+        self.assertEqual(self.FAKE_TAGS, result)
+
+    def test_get_tags_tags(self):
+        """
+        EC2.get_tags correctly converts the tags in list[EC2.Tag] format
+        """
+        result = EC2.get_tags(self.FAKE_TAGS_TAG)
+        self.assertEqual(self.FAKE_TAGS, result)
+
+    def test_get_tags_dict_no_key(self):
+        """
+        EC2.get_tags correctly raises error when no 'Key' key is present in a dictionary
+        """
+        invalid_tag = {'Value': 'foo'}
+        with self.assertRaises(ValueError) as e:
+            EC2.get_tags([invalid_tag])
+
+        self.assertEqual(
+            'The {tag} is invalid and/or contains invalid values'.format(tag=invalid_tag),
+            str(e.exception),
+        )
+
+    def test_get_tags_dict_no_value(self):
+        """
+        EC2.get_tags correctly raises error when no 'Value' key is present in a dictionary
+        """
+        invalid_tag = {'Key': 'foo'}
+        with self.assertRaises(ValueError) as e:
+            EC2.get_tags([invalid_tag])
+
+        self.assertEqual(
+            'The {tag} is invalid and/or contains invalid values'.format(tag=invalid_tag),
+            str(e.exception),
+        )
+
+    def test_get_tags_wrong_type(self):
+        """
+        EC2.get_tags correctly raises error when wrong typed tag is passed
+        """
+        invalid_tag = 1
+        with self.assertRaises(ValueError) as e:
+            EC2.get_tags([invalid_tag])
+
+        self.assertEqual(
+            'The {tag} is invalid and/or contains invalid values'.format(tag=invalid_tag),
+            str(e.exception),
         )
 
     def test_attach_ebs_volume(self):

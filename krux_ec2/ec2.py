@@ -310,6 +310,37 @@ class EC2(Object):
 
         return instance
 
+    @staticmethod
+    def get_tags(instance_tags):
+        """
+        Converts the given list of tags into a single dictionary. If there is any duplicate of keys,
+        the later overwrites the former.
+
+        :param instance_tags: List of tags
+        :type instance_tags: list[dict] | list[EC2.Tag]
+        :return: Dictionary of tags
+        :rtype: dict
+        """
+        result = {}
+        for tag in instance_tags:
+            if isinstance(tag, dict) and 'Key' in tag and 'Value' in tag:
+                # GOTCHA: This will throw an error if there is no 'Key' or 'Value' in the dictionary.
+                #         That is intentional so that the stacktrace will come back to here.
+                key = tag['Key']
+                value = tag['Value']
+            elif hasattr(tag, 'key') and hasattr(tag, 'value'):
+                key = tag.key
+                value = tag.value
+            else:
+                raise ValueError('The {tag} is invalid and/or contains invalid values'.format(tag=tag))
+
+            if key == 's_classes':
+                value = value.split(',')
+
+            result[key] = value
+
+        return result
+
     def attach_ebs_volume(
         self,
         instance,
