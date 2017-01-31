@@ -133,7 +133,7 @@ class EC2(Object):
     # These EBS AMIs don't set this up, so we have to. sdb will always be ephemeral0,
     # which is how we've always done it. If there are more devices, they will get sdc,sdd,sde.
     # NOTE: see mounts.pp in kbase for how-we-deal-with-these.
-    _BLOCK_DEVICE_MAP = [{
+    DEFAULT_BLOCK_DEVICE_MAP = [{
         'VirtualName': 'ephemeral0',
         'DeviceName': '/dev/sdb',
     }, {
@@ -259,12 +259,19 @@ class EC2(Object):
             'instance-state-name': ['running', 'stopped'],
         })
 
-    def run_instance(self, ami_id, cloud_config, instance_type, sec_group, zone, *args, **kwargs):
+    def run_instance(
+        self,
+        ami_id,
+        cloud_config,
+        instance_type,
+        sec_group,
+        zone,
+        block_device_mappings=DEFAULT_BLOCK_DEVICE_MAP,
+        *args,
+        **kwargs
+    ):
         """
         Starts an instance in the given AMI.
-
-        .. note::
-            4 block devices are created as ephemeral and passed. Refer to `EC2._BLOCK_DEVICE_MAP`.
 
         .. seealso::
             https://boto3.readthedocs.io/en/stable/reference/services/ec2.html#EC2.ServiceResource.create_instances
@@ -280,6 +287,8 @@ class EC2(Object):
         :type sec_group: str
         :param zone: Availability zone of the new instance
         :type zone: str
+        :param block_device_mappings: Block device mapping of the new instance
+        :type block_device_mappings: list[dict]
         :param args: Ordered arguments passed directly to boto3.resource.create_instances()
         :type args: list
         :param kwargs: Keyword arguments passed directly to boto3.resource.create_instances()
@@ -295,7 +304,7 @@ class EC2(Object):
             InstanceType=instance_type,
             UserData=cloud_config,
             SecurityGroups=[sec_group],
-            BlockDeviceMappings=self._BLOCK_DEVICE_MAP,
+            BlockDeviceMappings=block_device_mappings,
             IamInstanceProfile={'Name': self.INSTANCE_PROFILE_NAME},
             Placement={'AvailabilityZone': zone},
         )
