@@ -163,7 +163,7 @@ class EC2Tests(unittest.TestCase):
         """
         self._resource.create_instances.return_value = [self.FAKE_INSTANCE]
 
-        instance=self._ec2.run_instance(
+        instance = self._ec2.run_instance(
             ami_id=self.FAKE_AMI_ID,
             cloud_config=self.FAKE_CLOUD_CONFIG,
             instance_type=self.FAKE_INSTANCE_TYPE,
@@ -405,6 +405,7 @@ class EC2Tests(unittest.TestCase):
 
         self.FAKE_ELASTIC_IP.disassociate.assert_called_once_with()
 
+
 class MapSearchToFilterStub(object):
     """Used below to test the @map_search_to_filter decorator."""
     @map_search_to_filter
@@ -426,8 +427,10 @@ class MapSearchToFilterDecoratorTests(unittest.TestCase):
         """Ensure a list of arg=val pairs is parsed correctly."""
         search = ['instance-state-name=running']
         self.search_stub.filter_stubs(search)
-        self.assertEqual(['running'],
-            self.search_stub.results._filter['instance-state-name'])
+        self.assertEqual(
+            ['running'],
+            self.search_stub.results._filter['instance-state-name']
+        )
 
     def test_map_search_to_filter_handles_dict(self):
         """Ensure instance of Filter is instantiated with dict passed."""
