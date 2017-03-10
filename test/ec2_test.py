@@ -35,13 +35,15 @@ class EC2Tests(unittest.TestCase):
     FAKE_ZONE = 'us-east-1a'
     FAKE_DEVICE = '/dev/sdz'
     FAKE_VOLUME_SIZE = 10
+    FAKE_ADDRESS = '127.0.0.1'
+    FAKE_ELASTIC_IP = MagicMock(public_ip=FAKE_ADDRESS)
     FAKE_INSTANCE = MagicMock(
         id='i-a1b2c3d4',
         public_dns_name='ec2-127-0-0-1.compute-1.amazonaws.com',
         placement={
             'AvailabilityZone': FAKE_ZONE,
         },
-        classic_address='127.0.0.1'
+        classic_address=FAKE_ELASTIC_IP
     )
     FAKE_VOLUME = MagicMock(
         id='vol-a1b2c3d4',
@@ -363,23 +365,45 @@ class EC2Tests(unittest.TestCase):
 
     def test_find_elastic_ips(self):
         """
-        EC2.find_ebs_volumes correctly returns the elastic IP of the instance
+        EC2.find_elastic_ips correctly returns the elastic IP of the instance
         """
-        expected = self.FAKE_INSTANCE.classic_address
-        actual = self._ec2.find_elastic_ips(self.FAKE_INSTANCE)
-        self.assertEqual(expected, actual)
+        self._resource.classic_addresses.filter.return_value = [
+            self.FAKE_ELASTIC_IP,
+            MagicMock(public_ip='196.168.0.1'),
+        ]
 
-    def test_update_elastic_ip(self):
+        self.assertEqual([self.FAKE_ELASTIC_IP], self._ec2.find_elastic_ip(self.FAKE_ADDRESS))
+
+    def test_find_elastic_ips_none(self):
+        """
+        EC2.find_elastic_ips correctly returns an empty list if a non-existing IP is given
+        """
+        self._resource.classic_addresses.filter.return_value = [
+            self.FAKE_ELASTIC_IP,
+            MagicMock(public_ip='196.168.0.1'),
+        ]
+
+        self.assertEqual([], self._ec2.find_elastic_ip('255.255.255.255'))
+
+    def test_update_elastic_ip_new(self):
         """
         EC2.update_elastic_ip correctly associates the elastic IP to the new instance
         """
         address = MagicMock()
 
-        result = self._ec2.update_elastic_ip(address, self.FAKE_INSTANCE)
+        self._ec2.update_elastic_ip(self.FAKE_INSTANCE, address)
 
-        self.assertEqual(result, address.associate.return_value)
         address.associate.assert_called_once_with(InstanceId=self.FAKE_INSTANCE.id)
 
+    def test_update_elastic_ip_delete(self):
+        """
+        EC2.update_elastic_ip correctly disassociates all elastic IPs for an instance if None is passed
+        """
+        self._resource.classic_addresses.filter.return_value = [self.FAKE_ELASTIC_IP]
+
+        self._ec2.update_elastic_ip(self.FAKE_INSTANCE, None)
+
+        self.FAKE_ELASTIC_IP.disassociate.assert_called_once_with()
 
 class MapSearchToFilterStub(object):
     """Used below to test the @map_search_to_filter decorator."""
