@@ -37,6 +37,7 @@ class EC2Tests(unittest.TestCase):
     FAKE_VOLUME_SIZE = 10
     FAKE_ADDRESS = '127.0.0.1'
     FAKE_ELASTIC_IP = MagicMock(public_ip=FAKE_ADDRESS)
+    FAKE_VOLUME_TYPE = 'gp2'
     FAKE_INSTANCE = MagicMock(
         id='i-a1b2c3d4',
         public_dns_name='ec2-127-0-0-1.compute-1.amazonaws.com',
@@ -255,6 +256,7 @@ class EC2Tests(unittest.TestCase):
             instance=self.FAKE_INSTANCE,
             save_on_termination=False,
             volume_size=self.FAKE_VOLUME_SIZE,
+            volume_type=self.FAKE_VOLUME_TYPE,
         )
 
         self.assertEqual(self.FAKE_VOLUME, volume)
@@ -262,11 +264,12 @@ class EC2Tests(unittest.TestCase):
         self._resource.create_volume.assert_called_once_with(
             Size=self.FAKE_VOLUME_SIZE,
             AvailabilityZone=self.FAKE_ZONE,
-            VolumeType='gp2',
+            VolumeType=self.FAKE_VOLUME_TYPE,
         )
         self.FAKE_VOLUME.reload.assert_called_once_with()
         self.FAKE_VOLUME.attach_to_instance.assert_called_once_with(
-            InstanceId=self.FAKE_INSTANCE.id, Device=self.FAKE_DEVICE
+            InstanceId=self.FAKE_INSTANCE.id,
+            Device=self.FAKE_DEVICE,
         )
         self.FAKE_INSTANCE.modify_attribute.assert_called_once_with(BlockDeviceMappings=[{
             'DeviceName': self.FAKE_DEVICE,
@@ -322,6 +325,7 @@ class EC2Tests(unittest.TestCase):
             instance=self.FAKE_INSTANCE,
             save_on_termination=True,
             volume_size=self.FAKE_VOLUME_SIZE,
+            volume_type=self.FAKE_VOLUME_TYPE,
         )
 
         self.FAKE_INSTANCE.modify_attribute.assert_called_once_with(BlockDeviceMappings=[{
