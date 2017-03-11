@@ -146,6 +146,7 @@ class EC2(Object):
         'VirtualName': 'ephemeral3',
         'DeviceName': '/dev/sde',
     }]
+    DEFAULT_EBS_TYPE = 'standard'
 
     def __init__(
         self,
@@ -354,10 +355,10 @@ class EC2(Object):
         self,
         instance,
         device,
-        type,
         save_on_termination,
         volume_id=None,
         volume_size=None,
+        volume_type=DEFAULT_EBS_TYPE,
     ):
         """
         Attach a designated EBS volume to the given instance at the given device.
@@ -371,8 +372,6 @@ class EC2(Object):
         :type instance: boto3.ec2.Instance
         :param device: Device on the instance to which the EBS volume will be attached to (e.g. /dev/sdf)
         :type device: str
-        :param type: Type of the EBS volume to be attached
-        :type type: str
         :param save_on_termination: Whether to keep the volume even after the instance is terminated
         :type save_on_termination: bool
         :param volume_id: ID of a specific volume to use. If set to none, a new volume with the size of `volume_size`
@@ -381,6 +380,8 @@ class EC2(Object):
         :param volume_size: Size of a new volume to create. If `volume_id` and `volume_size` are both None, an error
                             is raised.
         :type volume_size: int
+        :param volume_type: Type of the EBS volume to be attached
+        :type volume_type: str
         :return: The newly attached EBS volume
         :rtype: boto3.ec2.Volume
         """
@@ -391,7 +392,7 @@ class EC2(Object):
             volume = self._get_resource().create_volume(
                 Size=volume_size,
                 AvailabilityZone=instance.placement['AvailabilityZone'],
-                VolumeType=type,
+                VolumeType=volume_type,
             )
 
             self._logger.debug('Waiting for the EBS volume %s to be ready...', volume.id)
