@@ -489,7 +489,7 @@ class EC2(Object):
 
         return sec_groups
 
-    def find_elastic_ips(self, instance):
+    def find_elastic_ip(self, ip, *args, **kwargs):
         """
         Find the Elastic IP(s) mapped to a given instance.
 
@@ -504,23 +504,37 @@ class EC2(Object):
         .. deprecated:: 0.1.0
             Use `instance.classic_address` instead
 
-        :param instance: Instance whose elastic IPs are returned
-        :type instance: boto3.ec2.Instance
+        :param ip: The public IP of the Elastic IP to search for
+        :type ip: str
+        :param args: Ordered arguments passed directly to boto3.resource.classic_addresses.filter()
+        :type args: list
+        :param kwargs: Keyword arguments passed directly to boto3.resource.classic_addresses.filter()
+        :type kwargs: dict
         :return: List of elastic IPs for the given instance
         :rtype: list[boto3.ec2.ClassicAddress]
         """
-        return instance.classic_address
+        # GOTCHA: Do not use PublicIps parameter here by default because it will cause an exception when
+        #         used with a non-existing IP. Allow users to enter any IPs and return them an empty list
+        #         if no EIP matches it.
+        return [
+            classic_address for classic_address in self._get_resource().classic_addresses.filter(*args, **kwargs)
+            if classic_address.public_ip == ip
+        ]
 
-    def update_elastic_ip(self, address, new_instance):
+    def update_elastic_ip(self, instance, address):
         """
         Updates an Elastic IP to point at the new_instance provided.
 
         .. seealso::
             https://boto3.readthedocs.io/en/stable/reference/services/ec2.html#EC2.ClassicAddress.associate
 
-        :param address: Elastic IP to update
-        :type address: boto3.ec2.ClassicAddress
-        :return: Dictionary containing the Association ID
-        :rtype: dict
+        :param instance: Instance to be associated with the given elastic IP
+        :type instance: boto3.ec2.Instance
+        :param address: Elastic IP to update or None to disassociate the elastic IP
+        :type address: boto3.ec2.ClassicAddress | None
         """
-        return address.associate(InstanceId=new_instance.id)
+        if address is not None:
+            address.associate(InstanceId=instance.id)
+        else:
+            for classic_address in self.find_elastic_ip(instance.classic_address.public_ip):
+                classic_address.disassociate()
