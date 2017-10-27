@@ -309,17 +309,24 @@ class EC2(Object):
             'MaxCount': 1,
             'InstanceType': instance_type,
             'UserData': cloud_config,
-            'SecurityGroups': [sec_group],
             'BlockDeviceMappings': block_device_mappings,
             'IamInstanceProfile': {'Name': self.INSTANCE_PROFILE_NAME},
             'Placement': {'AvailabilityZone': zone},
         }
 
-        if vpc_security_group:
+        # @joestump 10/27/2017 We only attached SecurityGroupIds when we create the instance
+        # if the instance is being spun up in a VPC w/ a subnet. The reason we don't pass
+        # both for EC2 Classic instances is because it's handled by a later call to the
+        # attach_classic_link_vpc() EC2 instance method after the instance is created.
+        if vpc_security_group and subnet_id:
             create_kwargs['SecurityGroupIds'] = [vpc_security_group]
+        elif not subnet_id:
+            # If we do NOT have a subnet we assigned the regular SG. Note that this is not
+            # assigned at all when a subnet is specified.
+            create_kwargs['SecurityGroups'] = [sec_group]
 
         if subnet_id:
-            craete_kwargs['SubnetId'] = subnet_id
+            create_kwargs['SubnetId'] = subnet_id
 
         instances = resource.create_instances(**create_kwargs)
 
