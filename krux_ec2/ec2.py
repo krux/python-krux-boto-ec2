@@ -268,6 +268,8 @@ class EC2(Object):
         sec_group,
         zone,
         block_device_mappings=DEFAULT_BLOCK_DEVICE_MAP,
+        vpc_security_group=None,
+        subnet_id=None
         *args,
         **kwargs
     ):
@@ -290,6 +292,8 @@ class EC2(Object):
         :type zone: str
         :param block_device_mappings: Block device mapping of the new instance
         :type block_device_mappings: list[dict]
+        :param vpc_id: ID of the VPC to start this instance in
+        :type vpc_id: str
         :param args: Ordered arguments passed directly to boto3.resource.create_instances()
         :type args: list
         :param kwargs: Keyword arguments passed directly to boto3.resource.create_instances()
@@ -298,17 +302,26 @@ class EC2(Object):
         :rtype: boto3.ec2.Instance
         """
         resource = self._get_resource()
-        instances = resource.create_instances(
-            ImageId=ami_id,
-            MinCount=1,
-            MaxCount=1,
-            InstanceType=instance_type,
-            UserData=cloud_config,
-            SecurityGroups=[sec_group],
-            BlockDeviceMappings=block_device_mappings,
-            IamInstanceProfile={'Name': self.INSTANCE_PROFILE_NAME},
-            Placement={'AvailabilityZone': zone},
-        )
+
+        create_kwargs = {
+            'ImageId': ami_id,
+            'MinCount': 1,
+            'MaxCount': 1,
+            'InstanceType': instance_type,
+            'UserData': cloud_config,
+            'SecurityGroups': [sec_group],
+            'BlockDeviceMappings': block_device_mappings,
+            'IamInstanceProfile': {'Name': self.INSTANCE_PROFILE_NAME},
+            'Placement': {'AvailabilityZone': zone},
+        }
+
+        if vpc_security_group:
+            create_kwargs['SecurityGroupIds'] = [vpc_security_group]
+
+        if subnet_id:
+            craete_kwargs['SubnetId'] = subnet_id
+
+        instances = resource.create_instances(**create_kwargs)
 
         instance = instances[0]
         self._logger.debug('Waiting for the instance %s to be ready...', instance.id)
@@ -520,6 +533,54 @@ class EC2(Object):
             classic_address for classic_address in self._get_resource().classic_addresses.filter(*args, **kwargs)
             if classic_address.public_ip == ip
         ]
+
+    def get_vpc_security_group_id(self, vpc_id, security_group):
+        """
+        Returns the VPC security group ID for the given Classic security group name.
+        """
+        client = self._get_client()
+        response = client.describe_security_groups(
+            Filters=[
+                {
+                    'Name': 'group-name',
+                    'Values': [security_group]
+                },
+                {
+                    'Name': 'vpc-id',
+                    'Values': [vpc_id]
+                }
+
+            ])
+
+        try:
+            return response['SecurityGroups'][0]['GroupId']
+        except KeyError, IndexError:
+            return False
+
+    def fetch_subnets(self, vpc_id, zone=None):
+        """
+        Return subnets associated with a given VPC ID. 
+        """ 
+        filters = [
+            {
+                'Name': 'vpc-id',
+                'Values': [vpc_id]
+            }
+        ]
+
+        if zone:
+            filters.append({
+                'Name': 'availabilityZone',
+                'Values': [zone]
+            })
+
+        client = self._get_client()
+        response = client.describe_subnets(Filters=filters)
+
+        try:
+            return response['Subnets']
+        except KeyError:
+            return []
 
     def update_elastic_ip(self, instance, address):
         """
