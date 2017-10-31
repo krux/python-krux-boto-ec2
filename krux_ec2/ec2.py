@@ -269,7 +269,7 @@ class EC2(Object):
         zone,
         block_device_mappings=DEFAULT_BLOCK_DEVICE_MAP,
         vpc_security_group=None,
-        subnet_id=None
+        subnet_id=None,
         *args,
         **kwargs
     ):
