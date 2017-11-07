@@ -549,19 +549,22 @@ class EC2(Object):
         response = client.describe_security_groups(
             Filters=[
                 {
-                    'Name': 'group-name',
+                    'Name': 'tag-key',
+                    'Values': ['Name']
+                },
+                {
+                    'Name': 'tag-value',
                     'Values': [security_group]
                 },
                 {
                     'Name': 'vpc-id',
                     'Values': [vpc_id]
                 }
-
             ])
 
         try:
             return response['SecurityGroups'][0]['GroupId']
-        except KeyError, IndexError:
+        except (KeyError, IndexError):
             return False
 
     def fetch_subnets(self, vpc_id, zone=None):
