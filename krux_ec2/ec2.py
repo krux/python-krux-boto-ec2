@@ -546,6 +546,10 @@ class EC2(Object):
         Returns the VPC security group ID for the given Classic security group name.
         """
         client = self._get_client()
+
+        # @joestump 11/07/2017 We look up VPC security groups using the Name tag because VPC 
+        # security groups are created with TF and use name_prefix. This results in SG names
+        # that have unpredictable suffixes. TF sets the Name tag to a predictable value.
         response = client.describe_security_groups(
             Filters=[
                 {
