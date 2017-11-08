@@ -292,8 +292,10 @@ class EC2(Object):
         :type zone: str
         :param block_device_mappings: Block device mapping of the new instance
         :type block_device_mappings: list[dict]
-        :param vpc_id: ID of the VPC to start this instance in
-        :type vpc_id: str
+        :param vpc_security_group: ID of the VPC to start this instance in
+        :type vpc_security_group: str
+        :param subnet_id: ID of the VPC to start this instance in
+        :type subnet_id: str
         :param args: Ordered arguments passed directly to boto3.resource.create_instances()
         :type args: list
         :param kwargs: Keyword arguments passed directly to boto3.resource.create_instances()
