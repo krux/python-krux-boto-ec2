@@ -321,7 +321,7 @@ class EC2(Object):
         # both for EC2 Classic instances is because it's handled by a later call to the
         # attach_classic_link_vpc() EC2 instance method after the instance is created.
         if vpc_security_group and subnet_id:
-            create_kwargs['SecurityGroupIds'] = [vpc_security_group]
+            create_kwargs['SecurityGroupIds'] = [vpc_security_group.id]
         elif not subnet_id:
             # If we do NOT have a subnet we assigned the regular SG. Note that this is not
             # assigned at all when a subnet is specified.
@@ -543,60 +543,55 @@ class EC2(Object):
             if classic_address.public_ip == ip
         ]
 
-    def get_vpc_security_group_id(self, vpc_id, security_group):
+    def get_vpc_security_group(self, vpc_id, security_group):
         """
         Returns the VPC security group ID for the given Classic security group name.
+
+        :param vpc_id: The VPC ID the security group is expected to be on
+        :type vpc_id: str
+        :param security_group: The name of the security group to search for
+        :type security_group: str
+        :return: List of security groups that match the search criteria
+        :rtype: str
         """
-        client = self._get_client()
 
-        # @joestump 11/07/2017 We look up VPC security groups using the Name tag because VPC 
-        # security groups are created with TF and use name_prefix. This results in SG names
-        # that have unpredictable suffixes. TF sets the Name tag to a predictable value.
-        response = client.describe_security_groups(
-            Filters=[
-                {
-                    'Name': 'tag-key',
-                    'Values': ['Name']
-                },
-                {
-                    'Name': 'tag-value',
-                    'Values': [security_group]
-                },
-                {
-                    'Name': 'vpc-id',
-                    'Values': [vpc_id]
-                }
-            ])
+        # @joestump 11/07/2017 We look up VPC security groups using the Name tag because 
+        # VPC security groups are created with TF and use name_prefix. This results in 
+        # SG names that have unpredictable suffixes. TF sets the Name tag to a 
+        # predictable value.
+        filters = Filter()
+        filters.add_tag_filter('Name', security_group)
+        filters.add_filter('vpc-id', vpc_id)
 
-        try:
-            return response['SecurityGroups'][0]['GroupId']
-        except (KeyError, IndexError):
-            return False
+        security_groups = list(self._get_resource().security_groups.filter(Filters=filters.to_filter()))
+        self._logger.debug('Found security groups: {0}'.format(security_groups))
 
-    def fetch_subnets(self, vpc_id, zone=None):
+        if len(security_groups) == 1:
+            return security_groups[0]
+        else:
+            return False  # The mapping was not one-to-one or zero SGs were found.
+
+    def find_subnets(self, vpc_id, zone=None):
         """
         Return subnets associated with a given VPC ID. 
+
+        :param vpc_id: The VPC ID the subnet are expected to be attached to
+        :type vpc_id: str
+        :param zone: The availability zone to find a subnet for
+        :type zone: str
+        :return: List of subnets that match the search criteria
+        :rtype: list[boto3.ec2.Subnet]
         """ 
-        filters = [
-            {
-                'Name': 'vpc-id',
-                'Values': [vpc_id]
-            }
-        ]
+        filters = Filter({
+            'vpc-id': vpc_id
+        })
 
         if zone:
-            filters.append({
-                'Name': 'availabilityZone',
-                'Values': [zone]
-            })
+            filters.add_filter('availabilityZone', zone)
 
-        client = self._get_client()
-        response = client.describe_subnets(Filters=filters)
-
-        try:
-            return response['Subnets']
-        except KeyError:
-            return []
+        subnets = list(self._get_resource().subnets.filter(Filters=filters.to_filter()))
+        self._logger.debug('Found subnets: {0}'.format(subnets))
+        return subnets
 
     def update_elastic_ip(self, instance, address):
         """
