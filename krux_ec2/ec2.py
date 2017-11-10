@@ -320,18 +320,17 @@ class EC2(Object):
         # if the instance is being spun up in a VPC w/ a subnet. The reason we don't pass
         # both for EC2 Classic instances is because it's handled by a later call to the
         # attach_classic_link_vpc() EC2 instance method after the instance is created.
-        if vpc_security_group and subnet_id:
-            create_kwargs['SecurityGroupIds'] = [vpc_security_group.id]
-        elif not subnet_id:
+        if subnet_id:
+            create_kwargs['SubnetId'] = subnet_id
+
+            if vpc_security_group:
+                create_kwargs['SecurityGroupIds'] = [vpc_security_group.id]
+        else:
             # If we do NOT have a subnet we assigned the regular SG. Note that this is not
             # assigned at all when a subnet is specified.
             create_kwargs['SecurityGroups'] = [sec_group]
 
-        if subnet_id:
-            create_kwargs['SubnetId'] = subnet_id
-
         instances = resource.create_instances(**create_kwargs)
-
         instance = instances[0]
         self._logger.debug('Waiting for the instance %s to be ready...', instance.id)
 
@@ -582,9 +581,8 @@ class EC2(Object):
         :return: List of subnets that match the search criteria
         :rtype: list[boto3.ec2.Subnet]
         """ 
-        filters = Filter({
-            'vpc-id': vpc_id
-        })
+        filters = Filter()
+        filters.add_filter('vpc-id', vpc_id)
 
         if zone:
             filters.add_filter('availabilityZone', zone)
