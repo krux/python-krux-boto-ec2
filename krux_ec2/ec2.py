@@ -268,6 +268,8 @@ class EC2(Object):
         sec_group,
         zone,
         block_device_mappings=DEFAULT_BLOCK_DEVICE_MAP,
+        vpc_security_group=None,
+        subnet_id=None,
         *args,
         **kwargs
     ):
@@ -290,6 +292,10 @@ class EC2(Object):
         :type zone: str
         :param block_device_mappings: Block device mapping of the new instance
         :type block_device_mappings: list[dict]
+        :param vpc_security_group: ID of the VPC to start this instance in
+        :type vpc_security_group: str
+        :param subnet_id: ID of the VPC to start this instance in
+        :type subnet_id: str
         :param args: Ordered arguments passed directly to boto3.resource.create_instances()
         :type args: list
         :param kwargs: Keyword arguments passed directly to boto3.resource.create_instances()
@@ -298,18 +304,33 @@ class EC2(Object):
         :rtype: boto3.ec2.Instance
         """
         resource = self._get_resource()
-        instances = resource.create_instances(
-            ImageId=ami_id,
-            MinCount=1,
-            MaxCount=1,
-            InstanceType=instance_type,
-            UserData=cloud_config,
-            SecurityGroups=[sec_group],
-            BlockDeviceMappings=block_device_mappings,
-            IamInstanceProfile={'Name': self.INSTANCE_PROFILE_NAME},
-            Placement={'AvailabilityZone': zone},
-        )
 
+        create_kwargs = {
+            'ImageId': ami_id,
+            'MinCount': 1,
+            'MaxCount': 1,
+            'InstanceType': instance_type,
+            'UserData': cloud_config,
+            'BlockDeviceMappings': block_device_mappings,
+            'IamInstanceProfile': {'Name': self.INSTANCE_PROFILE_NAME},
+            'Placement': {'AvailabilityZone': zone},
+        }
+
+        # @joestump 10/27/2017 We only attached SecurityGroupIds when we create the instance
+        # if the instance is being spun up in a VPC w/ a subnet. The reason we don't pass
+        # both for EC2 Classic instances is because it's handled by a later call to the
+        # attach_classic_link_vpc() EC2 instance method after the instance is created.
+        if subnet_id:
+            create_kwargs['SubnetId'] = subnet_id
+
+            if vpc_security_group:
+                create_kwargs['SecurityGroupIds'] = [vpc_security_group.id]
+        else:
+            # If we do NOT have a subnet we assigned the regular SG. Note that this is not
+            # assigned at all when a subnet is specified.
+            create_kwargs['SecurityGroups'] = [sec_group]
+
+        instances = resource.create_instances(**create_kwargs)
         instance = instances[0]
         self._logger.debug('Waiting for the instance %s to be ready...', instance.id)
 
@@ -520,6 +541,55 @@ class EC2(Object):
             classic_address for classic_address in self._get_resource().classic_addresses.filter(*args, **kwargs)
             if classic_address.public_ip == ip
         ]
+
+    def get_vpc_security_group(self, vpc_id, security_group):
+        """
+        Returns the VPC security group ID for the given Classic security group name.
+
+        :param vpc_id: The VPC ID the security group is expected to be on
+        :type vpc_id: str
+        :param security_group: The name of the security group to search for
+        :type security_group: str
+        :return: List of security groups that match the search criteria
+        :rtype: str
+        """
+
+        # @joestump 11/07/2017 We look up VPC security groups using the Name tag because 
+        # VPC security groups are created with TF and use name_prefix. This results in 
+        # SG names that have unpredictable suffixes. TF sets the Name tag to a 
+        # predictable value.
+        filters = Filter()
+        filters.add_tag_filter('Name', security_group)
+        filters.add_filter('vpc-id', vpc_id)
+
+        security_groups = list(self._get_resource().security_groups.filter(Filters=filters.to_filter()))
+        self._logger.debug('Found security groups: {0}'.format(security_groups))
+
+        if len(security_groups) == 1:
+            return security_groups[0]
+        else:
+            return False  # The mapping was not one-to-one or zero SGs were found.
+
+    def find_subnets(self, vpc_id, zone=None):
+        """
+        Return subnets associated with a given VPC ID. 
+
+        :param vpc_id: The VPC ID the subnet are expected to be attached to
+        :type vpc_id: str
+        :param zone: The availability zone to find a subnet for
+        :type zone: str
+        :return: List of subnets that match the search criteria
+        :rtype: list[boto3.ec2.Subnet]
+        """ 
+        filters = Filter()
+        filters.add_filter('vpc-id', vpc_id)
+
+        if zone:
+            filters.add_filter('availabilityZone', zone)
+
+        subnets = list(self._get_resource().subnets.filter(Filters=filters.to_filter()))
+        self._logger.debug('Found subnets: {0}'.format(subnets))
+        return subnets
 
     def update_elastic_ip(self, instance, address):
         """
