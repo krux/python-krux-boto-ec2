@@ -192,6 +192,42 @@ class EC2Tests(unittest.TestCase):
             'Started instance %s', self.FAKE_INSTANCE.public_dns_name
         )
 
+    def test_run_instance_with_custom_profile(self):
+        """
+        EC2.run_instance correctly starts an instance with a custom IAM Instance Profile
+        """
+        self._resource.create_instances.return_value = [self.FAKE_INSTANCE]
+
+        instance = self._ec2.run_instance(
+            ami_id=self.FAKE_AMI_ID,
+            cloud_config=self.FAKE_CLOUD_CONFIG,
+            instance_type=self.FAKE_INSTANCE_TYPE,
+            sec_group=self.FAKE_SECURITY_GROUP,
+            zone=self.FAKE_ZONE,
+            iam_instance_profile='FakeProfile',
+        )
+
+        self.assertEqual(self.FAKE_INSTANCE, instance)
+        self._resource.create_instances.assert_called_once_with(
+            ImageId=self.FAKE_AMI_ID,
+            MinCount=1,
+            MaxCount=1,
+            InstanceType=self.FAKE_INSTANCE_TYPE,
+            UserData=self.FAKE_CLOUD_CONFIG,
+            SecurityGroups=[self.FAKE_SECURITY_GROUP],
+            BlockDeviceMappings=self._BLOCK_DEVICE_MAP,
+            IamInstanceProfile={'Name': 'FakeProfile'},
+            Placement={'AvailabilityZone': self.FAKE_ZONE},
+        )
+        self._logger.debug.assert_called_once_with(
+            'Waiting for the instance %s to be ready...', self.FAKE_INSTANCE.id
+        )
+        self.FAKE_INSTANCE.reload.assert_called_once_with()
+        self._logger.info.assert_called_once_with(
+            'Started instance %s', self.FAKE_INSTANCE.public_dns_name
+        )
+
+
     def test_get_tags_dict(self):
         """
         EC2.get_tags correctly converts the tags in list[dict] format
