@@ -270,6 +270,7 @@ class EC2(Object):
         block_device_mappings=DEFAULT_BLOCK_DEVICE_MAP,
         vpc_security_group=None,
         subnet_id=None,
+        iam_instance_profile=None,
         *args,
         **kwargs
     ):
@@ -296,6 +297,8 @@ class EC2(Object):
         :type vpc_security_group: str
         :param subnet_id: ID of the VPC to start this instance in
         :type subnet_id: str
+        :param iam_instance_profile: Name of the IAM Instance Profile to start this instance with
+        :type iam_instance_profile: str
         :param args: Ordered arguments passed directly to boto3.resource.create_instances()
         :type args: list
         :param kwargs: Keyword arguments passed directly to boto3.resource.create_instances()
@@ -305,6 +308,9 @@ class EC2(Object):
         """
         resource = self._get_resource()
 
+        if iam_instance_profile is None:
+            iam_instance_profile = self.INSTANCE_PROFILE_NAME
+
         create_kwargs = {
             'ImageId': ami_id,
             'MinCount': 1,
@@ -312,7 +318,7 @@ class EC2(Object):
             'InstanceType': instance_type,
             'UserData': cloud_config,
             'BlockDeviceMappings': block_device_mappings,
-            'IamInstanceProfile': {'Name': self.INSTANCE_PROFILE_NAME},
+            'IamInstanceProfile': {'Name': iam_instance_profile},
             'Placement': {'AvailabilityZone': zone},
         }
 
