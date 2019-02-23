@@ -271,7 +271,6 @@ class EC2(Object):
         vpc_security_group=None,
         subnet_id=None,
         iam_instance_profile=None,
-        *args,
         **kwargs
     ):
         """
@@ -299,8 +298,6 @@ class EC2(Object):
         :type subnet_id: str
         :param iam_instance_profile: Name of the IAM Instance Profile to start this instance with
         :type iam_instance_profile: str
-        :param args: Ordered arguments passed directly to boto3.resource.create_instances()
-        :type args: list
         :param kwargs: Keyword arguments passed directly to boto3.resource.create_instances()
         :type kwargs: dict
         :return: The newly created instance
@@ -311,7 +308,7 @@ class EC2(Object):
         if iam_instance_profile is None:
             iam_instance_profile = self.INSTANCE_PROFILE_NAME
 
-        create_kwargs = {
+        kwargs.update({
             'ImageId': ami_id,
             'MinCount': 1,
             'MaxCount': 1,
@@ -320,23 +317,23 @@ class EC2(Object):
             'BlockDeviceMappings': block_device_mappings,
             'IamInstanceProfile': {'Name': iam_instance_profile},
             'Placement': {'AvailabilityZone': zone},
-        }
+        })
 
         # @joestump 10/27/2017 We only attached SecurityGroupIds when we create the instance
         # if the instance is being spun up in a VPC w/ a subnet. The reason we don't pass
         # both for EC2 Classic instances is because it's handled by a later call to the
         # attach_classic_link_vpc() EC2 instance method after the instance is created.
         if subnet_id:
-            create_kwargs['SubnetId'] = subnet_id
+            kwargs['SubnetId'] = subnet_id
 
             if vpc_security_group:
-                create_kwargs['SecurityGroupIds'] = [vpc_security_group.id]
+                kwargs['SecurityGroupIds'] = [vpc_security_group.id]
         else:
             # If we do NOT have a subnet we assigned the regular SG. Note that this is not
             # assigned at all when a subnet is specified.
-            create_kwargs['SecurityGroups'] = [sec_group]
+            kwargs['SecurityGroups'] = [sec_group]
 
-        instances = resource.create_instances(**create_kwargs)
+        instances = resource.create_instances(**kwargs)
         instance = instances[0]
         self._logger.debug('Waiting for the instance %s to be ready...', instance.id)
 
