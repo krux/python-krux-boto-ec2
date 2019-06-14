@@ -2,7 +2,7 @@
 krux-stdlib==3.2.0
 
 # Krux-boto library which this is built on
-krux-boto==1.5.6
+krux-boto==1.6.0
 boto==2.49.0
 boto3==1.9.150
 botocore==1.12.150
