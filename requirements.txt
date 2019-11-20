@@ -1,5 +1,5 @@
 # Krux' python repo
-#--extra-index-url https://staticfiles.krxd.net/foss/pypi/
+--extra-index-url https://staticfiles.krxd.net/foss/pypi/
 
 # Krux-boto library which this is built on
 krux-boto==1.7.0
