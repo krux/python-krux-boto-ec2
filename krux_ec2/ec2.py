@@ -19,13 +19,12 @@ from decorator import decorator
 # Internal libraries
 #
 
-from krux_boto import Boto3, add_boto_cli_arguments
+from krux_boto.boto import get_boto3, add_boto_cli_arguments
 from krux.logging import get_logger
 from krux.stats import get_stats
 from krux.cli import get_parser, get_group
 from krux_ec2.filter import Filter
 from krux.object import Object
-
 
 NAME = 'krux-ec2'
 
@@ -168,7 +167,7 @@ class EC2(Object):
         super(EC2, self).__init__(name=NAME, logger=logger, stats=stats)
 
         # Throw exception when Boto3 is not used
-        if not isinstance(boto, Boto3):
+        if not isinstance(boto, get_boto3):
             raise TypeError('krux_ec2.ec2.EC2 only supports krux_boto.boto.Boto3')
 
         self.boto = boto
