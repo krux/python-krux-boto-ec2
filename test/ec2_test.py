@@ -23,7 +23,7 @@ from six import iteritems
 
 from krux_ec2.ec2 import EC2, map_search_to_filter
 from krux_ec2.filter import Filter
-from krux_boto import Boto
+from krux_boto.boto import get_boto
 
 
 class EC2Tests(unittest.TestCase):

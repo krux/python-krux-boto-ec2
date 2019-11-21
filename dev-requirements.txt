@@ -2,10 +2,10 @@
 -r requirements.txt
 
 # For unit tests
-coverage==4.2
+coverage==4.5.4
 # GOTCHA: Make sure this is installed with the latest version of pip. With pip < 1.5, you will run into following error:
 # `error in setup command: Error parsing /data/jenkins/workspace/python-krux-boto-pull-request/.ci.virtualenv/build/mock/setup.cfg: SyntaxError: '<' operator not allowed in environment markers`
-mock==2.0.0
+mock==3.0.5
 nose==1.3.7
 
 # Transitive libraries
@@ -15,4 +15,4 @@ nose==1.3.7
 
 # From mock
 funcsigs==1.0.2
-pbr==1.10.0
+pbr==5.4.3

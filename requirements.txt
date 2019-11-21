@@ -2,13 +2,13 @@
 --extra-index-url https://staticfiles.krxd.net/foss/pypi/
 
 # Krux-boto library which this is built on
-krux-boto==1.2.0
+krux-boto==1.7.0
 
 # For decorators
-decorator==4.0.10
+decorator==4.4.1
 
 # For Python 3 compatibility
-six==1.10.0
+six==1.13.0
 
 # Transitive libraries
 # This is needed so there are no version conflicts when
@@ -16,33 +16,33 @@ six==1.10.0
 # and another one does.
 
 # From krux-boto
-krux-stdlib==2.4.0
-boto==2.42.0
-boto3==1.4.0
+krux-stdlib==4.0.1
+boto==2.49.0
+boto3==1.10.21
 enum34==1.1.6
 pystache==0.5.4
-Sphinx==1.4.6
-kruxstatsd==0.3.0
+Sphinx==1.8.5
+kruxstatsd==0.3.6
 argparse==1.4.0
-tornado==3.0.1
-simplejson==3.8.2
-GitPython==2.0.8
+tornado==5.1.1
+simplejson==3.17.0
+GitPython==2.1.14
 lockfile==0.12.2
-subprocess32==3.2.7
-Jinja2==2.8
-MarkupSafe==0.23
-Pygments==2.1.3
-alabaster==0.7.9
-babel==2.3.4
-docutils==0.12
-imagesize==0.7.1
-pytz==2016.6.1
-snowballstemmer==1.2.1
-statsd==3.2.1
+subprocess32==3.5.4
+Jinja2==2.10.3
+MarkupSafe==1.1.1
+Pygments==2.4.2
+alabaster==0.7.12
+babel==2.7.0
+docutils==0.15.2
+imagesize==1.1.0
+pytz==2019.3
+snowballstemmer==2.0.0
+statsd==3.3.0
 gitdb==0.6.4
 smmap==0.9.0
-botocore==1.4.58
-futures==3.0.5
-jmespath==0.9.0
-python-dateutil==2.5.3
-s3transfer==0.1.5
+botocore==1.13.21
+futures==3.3.0 ; python_version <= '2.7'
+jmespath==0.9.4
+# python-dateutil==2.8.1
+s3transfer==0.2.1
