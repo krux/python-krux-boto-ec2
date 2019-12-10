@@ -57,3 +57,5 @@ docs/_build/
 
 # JetBrain IDE settings
 .idea/
+/.venv/
+/Pipfile
