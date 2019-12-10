@@ -23,7 +23,7 @@ from six import iteritems
 
 from krux_ec2.ec2 import EC2, map_search_to_filter
 from krux_ec2.filter import Filter
-from krux_boto.boto import get_boto
+from krux_boto.boto import get_boto, get_boto3
 
 
 class EC2Tests(unittest.TestCase):
@@ -101,6 +101,22 @@ class EC2Tests(unittest.TestCase):
         self.assertEqual(self._boto, self._ec2.boto)
         self.assertIsNone(self._ec2._resource)
         self.assertIsNone(self._ec2._client)
+
+    def test_create(self):
+        """
+        EC2() successfully initializes given a Boto3
+        """
+        boto3 = get_boto3()
+        ec2 = EC2(boto3)
+
+    def test_instantiate_boto(self):
+        """
+        EC2 raises exception given Boto (not 3)
+        """
+        boto = get_boto()
+        with self.assertRaises(TypeError):
+            ec2 = EC2(boto)
+
 
     def test_get_resource(self):
         """
