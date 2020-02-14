@@ -2,7 +2,7 @@
 --extra-index-url https://staticfiles.krxd.net/foss/pypi/
 
 # Krux-boto library which this is built on
-krux-boto==1.7.0
+krux-boto==1.7.1
 
 # For decorators
 decorator==4.4.1
