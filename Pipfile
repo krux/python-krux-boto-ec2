@@ -1,9 +1,4 @@
 [[source]]
-url = "${KRUX_PIP_PROP_URL}"
-verify_ssl = true
-name = "kruxprop"
-
-[[source]]
 url = "${KRUX_PIP_FOSS_URL}"
 verify_ssl = true
 name = "kruxfoss"
@@ -18,7 +13,7 @@ mock = "==3.0.5"
 nose = "==1.3.7"
 
 [packages]
-krux-stdlib = {version="==4.0.1", index="kruxprop"}
-krux-boto = {version="==1.7.2", index="kruxfoss"}
+krux-stdlib = {version="==4.0.1", index="kruxfoss"}
+krux-boto = {version="==1.7.4", index="kruxfoss"}
 decorator = {version="==4.4.1"}
 six = {version="*"}

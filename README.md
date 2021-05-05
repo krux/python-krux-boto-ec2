@@ -1,6 +1,6 @@
 # krux_ec2
 
-`krux_ec2` is a library that provides wrapper functions for common EC2 usage. It uses `krux_boto` to connect to AWS EC2.
+`krux_ec2` is a library that provides wrapper functions for common EC2 usage. It uses `krux_boto` to connect to AWS EC2. Set the environment variable `KRUX_PIP_FOSS_URL=https://staticfiles.krxd.net/foss/pypi/` to access dependencies for `pipenv install`.
 
 ## Warning
 
